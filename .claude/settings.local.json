@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(curl -s -o /dev/null -w \"cadastro: %{http_code}\\\\n\" http://localhost:3000/cadastro)",
+      "Bash(curl -s -o /dev/null -w \"login: %{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"doador/sinalizar: %{http_code}\\\\n\" http://localhost:3000/doador/sinalizar)",
+      "Bash(curl -s -o /dev/null -w \"doador/dashboard: %{http_code}\\\\n\" http://localhost:3000/doador/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"pontos: %{http_code}\\\\n\" http://localhost:3000/doador/pontos)",
+      "Bash(curl -s -o /dev/null -w \"dashboard: %{http_code}\\\\n\" http://localhost:3000/doador/dashboard)",
+      "Bash(curl -s http://localhost:3000/doador/dashboard)",
+      "Bash(curl -s \"http://localhost:3000/coletor/rota\")",
+      "Bash(curl -s \"http://localhost:3000/coletor/rota?stop=c1\")",
+      "Bash(curl -s \"http://localhost:3000/perfil?role=doador\")",
+      "Bash(curl -s \"http://localhost:3000/perfil?role=coletor\")",
+      "Bash(docker --version)",
+      "Bash(docker run *)",
+      "WebFetch(domain:www.prisma.io)",
+      "WebFetch(domain:pris.ly)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3333/coletas/__TRACKED_VAR__/confirmar -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"quantidadeRealKg\":4.5,\"fotoEvidenciaUrl\":\"https://exemplo.com/evidencia1.jpg\"}')",
+      "Bash(curl -s http://localhost:3333/doadores/me -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -o /dev/null -w \"frontend login: %{http_code}\\\\n\" http://localhost:3000/login)"
+    ]
+  }
+}

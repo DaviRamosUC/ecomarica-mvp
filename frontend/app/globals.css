@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1d2a44;
+
+  /* EcoMaricá — verde (ação/identidade do produto) */
+  --color-brand-50: #eaf6ec;
+  --color-brand-100: #d3ecd7;
+  --color-brand-400: #4c9a52;
+  --color-brand-500: #2e7d32;
+  --color-brand-600: #256b29;
+  --color-brand-700: #1b5e20;
+
+  /* Prefeitura de Maricá — paleta institucional */
+  --color-gov-red: #e30613;
+  --color-gov-blue: #005caa;
+  --color-gov-navy: #1d2a44;
+  --color-gov-bg: #f4f6f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+
+  --color-gov-red: var(--color-gov-red);
+  --color-gov-blue: var(--color-gov-blue);
+  --color-gov-navy: var(--color-gov-navy);
+  --color-gov-bg: var(--color-gov-bg);
+
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

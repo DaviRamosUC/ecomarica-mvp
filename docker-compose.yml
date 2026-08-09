@@ -1,0 +1,57 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecomarica-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_API_URL=http://localhost:3333
+    command: npm run dev
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecomarica-backend
+    ports:
+      - "3333:3333"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://ecomarica:ecomarica@db:5432/ecomarica
+      - PORT=3333
+      - JWT_SECRET=24669958b7f206a9aad34d9295a5da2e3c6eac6419645e7c7cca246aa5804fc1
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npm run start:dev
+
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: ecomarica-db
+    environment:
+      - POSTGRES_USER=ecomarica
+      - POSTGRES_PASSWORD=ecomarica
+      - POSTGRES_DB=ecomarica
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecomarica -d ecomarica"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:

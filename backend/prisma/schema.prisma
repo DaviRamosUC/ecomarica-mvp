@@ -1,0 +1,226 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+enum Papel {
+  DOADOR
+  COLETOR
+  PREFEITURA
+}
+
+enum StatusColeta {
+  AGUARDANDO
+  ACEITA
+  A_CAMINHO
+  CONFIRMADA
+  CANCELADA
+}
+
+enum StatusRota {
+  PLANEJADA
+  EM_ANDAMENTO
+  CONCLUIDA
+}
+
+enum StatusMoedaSocialTransacao {
+  PROCESSANDO
+  CONCLUIDA
+  FALHOU
+}
+
+model Usuario {
+  id        String   @id @default(uuid()) @db.Uuid
+  nome      String
+  email     String   @unique
+  senhaHash String
+  telefone  String
+  papel     Papel
+  criadoEm  DateTime @default(now())
+
+  doador           Doador?
+  coletor          Coletor?
+  agentePrefeitura AgentePrefeitura?
+  notificacoes     Notificacao[]
+
+  @@map("usuarios")
+}
+
+model Doador {
+  usuarioId        String  @id @db.Uuid
+  usuario          Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  saldoPontos      Int     @default(0)
+  saldoMoedaSocial Decimal @default(0) @db.Decimal(10, 2)
+
+  enderecos             Endereco[]
+  coletas               Coleta[]
+  pontosTransacoes      PontosTransacao[]
+  moedaSocialTransacoes MoedaSocialTransacao[]
+
+  @@map("doadores")
+}
+
+// Um doador pode ter vários endereços cadastrados; cada Coleta referencia
+// um específico (o que foi usado para sinalizar aquela coleta). Lat/lng são
+// capturados uma vez, quando o endereço é cadastrado (geolocalização do
+// navegador), e reutilizados em toda coleta sinalizada a partir dele.
+model Endereco {
+  id        String   @id @default(uuid()) @db.Uuid
+  doadorId  String   @db.Uuid
+  doador    Doador   @relation(fields: [doadorId], references: [usuarioId], onDelete: Cascade)
+  apelido   String?
+  rua       String
+  bairro    String
+  latitude  Float
+  longitude Float
+  criadoEm  DateTime @default(now())
+
+  coletas Coleta[]
+
+  @@map("enderecos")
+}
+
+model Coletor {
+  usuarioId      String  @id @db.Uuid
+  usuario        Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  veiculo        String
+  areaAtuacao    String
+  avaliacaoMedia Float   @default(0)
+  disponivel     Boolean @default(true)
+  homologado     Boolean @default(false)
+
+  coletas Coleta[]
+  rotas   Rota[]
+
+  @@map("coletores")
+}
+
+model AgentePrefeitura {
+  usuarioId    String   @id @db.Uuid
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  departamento String
+  permissoes   String[]
+
+  @@map("agentes_prefeitura")
+}
+
+model TipoResiduo {
+  id                  String  @id @default(uuid()) @db.Uuid
+  nome                String  @unique
+  fatorPontuacaoPorKg Decimal @db.Decimal(10, 2)
+  ativo               Boolean @default(true)
+
+  coletas Coleta[]
+
+  @@map("tipos_residuo")
+}
+
+model Coleta {
+  id                    String    @id @default(uuid()) @db.Uuid
+  doadorId              String    @db.Uuid
+  doador                Doador    @relation(fields: [doadorId], references: [usuarioId])
+  coletorId             String?   @db.Uuid
+  coletor               Coletor?  @relation(fields: [coletorId], references: [usuarioId])
+  tipoResiduoId         String    @db.Uuid
+  tipoResiduo           TipoResiduo @relation(fields: [tipoResiduoId], references: [id])
+  quantidadeEstimadaKg  Decimal   @db.Decimal(10, 2)
+  quantidadeRealKg      Decimal?  @db.Decimal(10, 2)
+  status                StatusColeta @default(AGUARDANDO)
+  enderecoId            String    @db.Uuid
+  endereco              Endereco  @relation(fields: [enderecoId], references: [id])
+  // Snapshot da lat/lng do Endereco no momento da sinalização — consultas de
+  // proximidade (módulo 4) usam ST_MakePoint(longitude, latitude) direto
+  // via $queryRaw, sem precisar de join nem de coluna geometry dedicada.
+  // Congelar aqui também evita que editar/remover o endereço depois mude a
+  // localização de uma coleta já em andamento.
+  latitude              Float
+  longitude             Float
+  fotoEvidenciaUrl      String?
+  dataSolicitacao       DateTime  @default(now())
+  dataColeta            DateTime?
+  pontosGerados         Int?
+
+  pontosTransacao PontosTransacao?
+
+  @@map("coletas")
+}
+
+model Rota {
+  id         String     @id @default(uuid()) @db.Uuid
+  coletorId  String     @db.Uuid
+  coletor    Coletor    @relation(fields: [coletorId], references: [usuarioId])
+  data       DateTime   @db.Date
+  status     StatusRota @default(PLANEJADA)
+  // Ordem de visita das coletas nesta rota — um array Postgres preserva a
+  // ordem em que os ids são gravados, o suficiente para o agrupamento
+  // simples do MVP (módulo 6), sem precisar de uma tabela de junção própria.
+  coletaIds  String[]   @db.Uuid
+
+  @@map("rotas")
+}
+
+model PontosTransacao {
+  id       String   @id @default(uuid()) @db.Uuid
+  doadorId String   @db.Uuid
+  doador   Doador   @relation(fields: [doadorId], references: [usuarioId])
+  coletaId String   @unique @db.Uuid
+  coleta   Coleta   @relation(fields: [coletaId], references: [id])
+  pontos   Int
+  data     DateTime @default(now())
+
+  @@map("pontos_transacoes")
+}
+
+model MoedaSocialTransacao {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  doadorId           String                     @db.Uuid
+  doador             Doador                     @relation(fields: [doadorId], references: [usuarioId])
+  pontosConvertidos  Int
+  valorMoeda         Decimal                    @db.Decimal(10, 2)
+  status             StatusMoedaSocialTransacao @default(PROCESSANDO)
+  data               DateTime                   @default(now())
+
+  @@map("moeda_social_transacoes")
+}
+
+// Linha única com a taxa de conversão global de pontos em moeda social,
+// gerenciável pela Prefeitura (módulo 8). Substitui a constante hardcoded
+// usada no módulo 7 para POST /doadores/me/converter.
+model TaxaConversao {
+  id            String   @id @default(uuid()) @db.Uuid
+  valorPorPonto Decimal  @db.Decimal(10, 4)
+  atualizadoEm  DateTime @updatedAt
+
+  @@map("taxa_conversao")
+}
+
+// Banners do carrossel exibido no dashboard do doador, gerenciados pela
+// Prefeitura. Imagem como data URL base64 (mesmo padrão de fotoEvidenciaUrl
+// em Coleta) — sem upload multipart/S3, fora do escopo do MVP.
+model Banner {
+  id        String   @id @default(uuid()) @db.Uuid
+  imagemUrl String
+  titulo    String?
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  @@map("banners")
+}
+
+model Notificacao {
+  id        String   @id @default(uuid()) @db.Uuid
+  usuarioId String   @db.Uuid
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagem  String
+  lida      Boolean  @default(false)
+  data      DateTime @default(now())
+
+  @@map("notificacoes")
+}
