@@ -25,11 +25,17 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN NODE_ENV=production npm run build
 
-# ---- production: standalone runtime image (default target) ----
+# ---- production: runtime image (default target) ----
+# No `output: "standalone"` here on purpose — that mode is for self-hosted
+# Docker deploys and actively breaks Vercel's own build/packaging step
+# (Vercel doesn't use this Dockerfile at all, but next.config.ts is shared).
+# So this stage just carries the full build output + node_modules instead.
 FROM base AS production
 ENV NODE_ENV=production
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/public ./public
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/next.config.ts ./next.config.ts
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]
