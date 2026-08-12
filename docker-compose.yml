@@ -3,6 +3,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev
     container_name: ecomarica-frontend
     ports:
       - "3000:3000"
@@ -20,6 +21,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: dev
     container_name: ecomarica-backend
     ports:
       - "3333:3333"
